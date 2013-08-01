@@ -9,7 +9,8 @@ RPMDB = '/var/lib/rpm/Packages'
 
 def print_diff(one, two, message='Difference'):
     """Prints out the difference of two sets with started by message"""
-    pkgs = set(one) - set(two) 
+    #print "len one: %s // len two: %s" % (len(one), len(two))
+    pkgs = one.viewkeys() - two.viewkeys()
     if pkgs:
         print '%s: %s' % (message, ', '.join(map(str,pkgs)))    
 
@@ -17,6 +18,7 @@ def update_installed_rpms(rpm_list):
         """Connects to the default rpmdb and queries for installed packages"""
         ts = rpm.TransactionSet()
         mi = ts.dbMatch()
+        rpm_list.clear()
         for r in mi:
             rpm_list[r['name']] = [( r['version'], r['release']),  r['sha1header']]
 
@@ -34,7 +36,7 @@ def updated_rpms(new_rpms, old_rpms):
                 print 'package %s upgraded' % k
 
 class RPMWatch(pyinotify.ProcessEvent):
-    def my_init(self):
+    def __init__(self):
         """Initializer, creates empty dicts and updates them from the rpmdb"""
         self.installed_rpms = {}
         self.known_rpms = {}
@@ -46,9 +48,9 @@ class RPMWatch(pyinotify.ProcessEvent):
         print "DB modified"
         sleep(5)
         update_installed_rpms(self.installed_rpms)
-        print_diff(self.installed_rpms, self.known_rpms, 'Installed: ')
+        print_diff(self.installed_rpms, self.known_rpms, 'Installed ')
+        print_diff(self.known_rpms, self.installed_rpms, 'Removed ')
         updated_rpms(self.installed_rpms, self.known_rpms)
-        print_diff(self.known_rpms, self.installed_rpms, 'Removed: ')
         self.known_rpms = self.installed_rpms.copy()
 
 
